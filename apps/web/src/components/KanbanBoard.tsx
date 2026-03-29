@@ -6,10 +6,10 @@ import type { Idea, IdeaStatus } from "@sultan-saif/shared";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const COLUMNS: { status: IdeaStatus; label: string }[] = [
-  { status: "inbox", label: "📥 الوارد" },
-  { status: "approved", label: "✅ موافق عليها" },
-  { status: "in_execution", label: "🚀 قيد التنفيذ" },
-  { status: "archived", label: "🗄️ المؤرشف" },
+  { status: "inbox", label: "\u{1F4E5} \u0627\u0644\u0648\u0627\u0631\u062F" },
+  { status: "approved", label: "\u2705 \u0645\u0648\u0627\u0641\u0642 \u0639\u0644\u064A\u0647\u0627" },
+  { status: "in_execution", label: "\u{1F680} \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630" },
+  { status: "archived", label: "\u{1F5C4}\uFE0F \u0627\u0644\u0645\u0624\u0631\u0634\u0641" },
 ];
 
 const NEXT_STATUS: Partial<Record<IdeaStatus, IdeaStatus>> = {
@@ -18,14 +18,26 @@ const NEXT_STATUS: Partial<Record<IdeaStatus, IdeaStatus>> = {
 };
 
 const NEXT_LABEL: Partial<Record<IdeaStatus, string>> = {
-  inbox: "موافقة",
-  approved: "تنفيذ",
+  inbox: "\u0645\u0648\u0627\u0641\u0642\u0629",
+  approved: "\u062A\u0646\u0641\u064A\u0630",
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  "Hacker News": "#ff6600",
+  "Dev.to": "#3b49df",
+  "GitHub Trending": "#238636",
+  "Reddit r/programming": "#ff4500",
 };
 
 export function KanbanBoard() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [availableSources, setAvailableSources] = useState<string[]>([]);
+  const [toast, setToast] = useState<{
+    message: string;
+    error?: boolean;
+  } | null>(null);
 
   const showToast = (message: string, error = false) => {
     setToast({ message, error });
@@ -34,13 +46,20 @@ export function KanbanBoard() {
 
   const fetchIdeas = useCallback(async () => {
     const res = await fetch(`${API_URL}/ideas`);
-    const json = await res.json() as { data: Idea[] };
+    const json = (await res.json()) as { data: Idea[] };
     setIdeas(json.data);
+  }, []);
+
+  const fetchSources = useCallback(async () => {
+    const res = await fetch(`${API_URL}/ideas/sources`);
+    const json = (await res.json()) as { data: string[] };
+    setAvailableSources(json.data);
   }, []);
 
   useEffect(() => {
     fetchIdeas();
-  }, [fetchIdeas]);
+    fetchSources();
+  }, [fetchIdeas, fetchSources]);
 
   const updateStatus = async (id: string, status: IdeaStatus) => {
     const res = await fetch(`${API_URL}/ideas/${id}`, {
@@ -66,34 +85,63 @@ export function KanbanBoard() {
     setGenerating(true);
     try {
       const res = await fetch(`${API_URL}/ideas/generate`, { method: "POST" });
-      const json = await res.json() as { data: Idea[] };
+      const json = (await res.json()) as {
+        data: Idea[];
+        stats?: { generated: number; duplicates: number; inserted: number };
+      };
       if (res.ok) {
         setIdeas((prev) => [...json.data, ...prev]);
-        showToast(`تم توليد ${json.data.length} فكرة جديدة`);
+        const stats = json.stats;
+        const msg = stats
+          ? `\u062A\u0645 \u062A\u0648\u0644\u064A\u062F ${stats.inserted} \u0641\u0643\u0631\u0629 \u062C\u062F\u064A\u062F\u0629 (${stats.duplicates} \u0645\u0643\u0631\u0631\u0629)`
+          : `\u062A\u0645 \u062A\u0648\u0644\u064A\u062F ${json.data.length} \u0641\u0643\u0631\u0629 \u062C\u062F\u064A\u062F\u0629`;
+        showToast(msg);
+        fetchSources();
       } else {
-        showToast("فشل توليد الأفكار", true);
+        showToast("\u0641\u0634\u0644 \u062A\u0648\u0644\u064A\u062F \u0627\u0644\u0623\u0641\u0643\u0627\u0631", true);
       }
     } catch {
-      showToast("خطأ في الاتصال بالخادم", true);
+      showToast("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645", true);
     } finally {
       setGenerating(false);
     }
   };
 
+  const filteredIdeas =
+    sourceFilter === "all"
+      ? ideas
+      : ideas.filter((idea) => idea.sourceName === sourceFilter);
+
   const ideasByStatus = (status: IdeaStatus) =>
-    ideas.filter((idea) => idea.status === status);
+    filteredIdeas.filter((idea) => idea.status === status);
 
   return (
     <>
       <header className="header">
-        <h1>💡 نظام توليد الأفكار التقنية</h1>
-        <button
-          className="generate-btn"
-          onClick={generateIdeas}
-          disabled={generating}
-        >
-          {generating ? "جاري التوليد..." : "⚡ توليد أفكار جديدة"}
-        </button>
+        <h1>{"\u{1F4A1}"} \u0646\u0638\u0627\u0645 \u062A\u0648\u0644\u064A\u062F \u0627\u0644\u0623\u0641\u0643\u0627\u0631 \u0627\u0644\u062A\u0642\u0646\u064A\u0629</h1>
+        <div className="header-actions">
+          <select
+            className="source-filter"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+          >
+            <option value="all">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0627\u062F\u0631</option>
+            {availableSources.map((source) => (
+              <option key={source} value={source}>
+                {source}
+              </option>
+            ))}
+          </select>
+          <button
+            className="generate-btn"
+            onClick={generateIdeas}
+            disabled={generating}
+          >
+            {generating
+              ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0648\u0644\u064A\u062F..."
+              : "\u26A1 \u062A\u0648\u0644\u064A\u062F \u0623\u0641\u0643\u0627\u0631 \u062C\u062F\u064A\u062F\u0629"}
+          </button>
+        </div>
       </header>
 
       <div className="board">
@@ -107,7 +155,7 @@ export function KanbanBoard() {
               </div>
 
               {columnIdeas.length === 0 ? (
-                <div className="empty-state">لا توجد أفكار</div>
+                <div className="empty-state">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0641\u0643\u0627\u0631</div>
               ) : (
                 columnIdeas.map((idea) => (
                   <div key={idea.id} className="card">
@@ -115,17 +163,24 @@ export function KanbanBoard() {
                     <div className="card-summary">{idea.summary}</div>
                     {idea.sourceName && (
                       <div className="card-source">
-                        المصدر:{" "}
-                        {idea.sourceUrl ? (
+                        <span
+                          className="source-badge"
+                          style={{
+                            backgroundColor:
+                              SOURCE_COLORS[idea.sourceName] ?? "#6b7280",
+                          }}
+                        >
+                          {idea.sourceName}
+                        </span>
+                        {idea.sourceUrl && (
                           <a
                             href={idea.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="source-link"
                           >
-                            {idea.sourceName}
+                            \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0635\u062F\u0631
                           </a>
-                        ) : (
-                          idea.sourceName
                         )}
                       </div>
                     )}
@@ -133,7 +188,9 @@ export function KanbanBoard() {
                       {NEXT_STATUS[status] && (
                         <button
                           className={`action-btn ${status === "inbox" ? "btn-approve" : "btn-execute"}`}
-                          onClick={() => updateStatus(idea.id, NEXT_STATUS[status]!)}
+                          onClick={() =>
+                            updateStatus(idea.id, NEXT_STATUS[status]!)
+                          }
                         >
                           {NEXT_LABEL[status]}
                         </button>
@@ -143,7 +200,7 @@ export function KanbanBoard() {
                           className="action-btn btn-archive"
                           onClick={() => updateStatus(idea.id, "archived")}
                         >
-                          أرشفة
+                          \u0623\u0631\u0634\u0641\u0629
                         </button>
                       )}
                       {status === "archived" && (
@@ -151,14 +208,14 @@ export function KanbanBoard() {
                           className="action-btn btn-inbox"
                           onClick={() => updateStatus(idea.id, "inbox")}
                         >
-                          استرجاع
+                          \u0627\u0633\u062A\u0631\u062C\u0627\u0639
                         </button>
                       )}
                       <button
                         className="action-btn btn-delete"
                         onClick={() => deleteIdea(idea.id)}
                       >
-                        حذف
+                        \u062D\u0630\u0641
                       </button>
                     </div>
                   </div>

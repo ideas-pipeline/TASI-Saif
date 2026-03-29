@@ -26,6 +26,48 @@ body {
   color: #f1f5f9;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.source-filter {
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.source-filter:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.source-badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  margin-left: 0.25rem;
+}
+
+.source-link {
+  color: #3b82f6;
+  text-decoration: none;
+  margin-right: 0.5rem;
+  font-size: 0.7rem;
+}
+
+.source-link:hover {
+  text-decoration: underline;
+}
+
 .generate-btn {
   background: #3b82f6;
   color: white;
@@ -121,15 +163,10 @@ body {
   font-size: 0.7rem;
   color: #64748b;
   margin-bottom: 0.75rem;
-}
-
-.card-source a {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.card-source a:hover {
-  text-decoration: underline;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .card-actions {
