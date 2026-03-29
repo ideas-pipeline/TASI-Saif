@@ -12,7 +12,8 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0"
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@sultan-saif/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
