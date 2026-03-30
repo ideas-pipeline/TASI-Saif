@@ -34,7 +34,8 @@ cd workspace
 
 # 2. Copy environment file
 cp .env.example .env
-# Fill in your ANTHROPIC_API_KEY and any other required values
+# Fill in DATABASE_URL, CRON_SECRET, and any other required values
+# AI uses local Claude Code CLI — no API key needed
 
 # 3. Start local services (Postgres + Redis)
 docker compose up -d

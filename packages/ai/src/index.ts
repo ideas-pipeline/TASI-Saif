@@ -1,18 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { GeneratedIdea } from "@sultan-saif/shared";
 import { fetchAllSources, type SourceArticle } from "./sources.js";
+
+const execFileAsync = promisify(execFile);
 
 export type { GeneratedIdea };
 export { fetchAllSources, type SourceArticle } from "./sources.js";
 
 export async function generateIdeasFromSources(): Promise<GeneratedIdea[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY environment variable is required");
-  }
-
-  const client = new Anthropic({ apiKey });
-
   const articles = await fetchAllSources();
 
   if (articles.length === 0) {
@@ -26,13 +22,7 @@ export async function generateIdeasFromSources(): Promise<GeneratedIdea[]> {
     )
     .join("\n\n");
 
-  const message = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
-    messages: [
-      {
-        role: "user",
-        content: `You are a tech strategist. Review these trending tech articles from multiple sources (Hacker News, Dev.to, GitHub Trending, Reddit) and extract the top 8 most interesting and actionable ideas for a software team.
+  const prompt = `You are a tech strategist. Review these trending tech articles from multiple sources (Hacker News, Dev.to, GitHub Trending, Reddit) and extract the top 8 most interesting and actionable ideas for a software team.
 
 For each idea, provide:
 - A concise title (max 10 words)
@@ -54,16 +44,22 @@ Respond ONLY with valid JSON in this exact format:
       "sourceName": "..."
     }
   ]
-}`,
-      },
-    ],
-  });
+}`;
 
-  const content = message.content[0];
-  if (!content || content.type !== "text") {
-    throw new Error("Unexpected response type from Claude");
+  const { stdout } = await execFileAsync(
+    "claude",
+    ["-p", prompt, "--output-format", "text", "--max-turns", "1"],
+    { maxBuffer: 1024 * 1024, timeout: 120_000 }
+  );
+
+  const text = stdout.trim();
+
+  // Extract JSON from response — handle cases where Claude wraps in markdown code blocks
+  const jsonMatch = text.match(/\{[\s\S]*"ideas"[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Could not extract JSON from Claude response");
   }
 
-  const parsed = JSON.parse(content.text) as { ideas: GeneratedIdea[] };
+  const parsed = JSON.parse(jsonMatch[0]) as { ideas: GeneratedIdea[] };
   return parsed.ideas;
 }
