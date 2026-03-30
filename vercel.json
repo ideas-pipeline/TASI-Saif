@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd apps/web && pnpm build",
   "installCommand": "pnpm install",
-  "outputDirectory": "apps/web/.next"
+  "buildCommand": "pnpm turbo run build --filter=@sultan-saif/web",
+  "outputDirectory": "apps/web/.next",
+  "crons": [
+    {
+      "path": "/api/cron/generate",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }
