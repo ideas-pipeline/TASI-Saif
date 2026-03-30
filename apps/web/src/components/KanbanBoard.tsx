@@ -32,6 +32,8 @@ const SOURCE_COLORS: Record<string, string> = {
 export function KanbanBoard() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [availableSources, setAvailableSources] = useState<string[]>([]);
   const [toast, setToast] = useState<{
@@ -45,15 +47,30 @@ export function KanbanBoard() {
   };
 
   const fetchIdeas = useCallback(async () => {
-    const res = await fetch(`${API_URL}/ideas`);
-    const json = (await res.json()) as { data: Idea[] };
-    setIdeas(json.data);
+    try {
+      setFetchError(null);
+      const res = await fetch(`${API_URL}/ideas`);
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const json = (await res.json()) as { data: Idea[] };
+      setIdeas(json.data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setFetchError(`فشل تحميل الأفكار: ${msg}`);
+      console.error("fetchIdeas error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const fetchSources = useCallback(async () => {
-    const res = await fetch(`${API_URL}/ideas/sources`);
-    const json = (await res.json()) as { data: string[] };
-    setAvailableSources(json.data);
+    try {
+      const res = await fetch(`${API_URL}/ideas/sources`);
+      if (!res.ok) return;
+      const json = (await res.json()) as { data: string[] };
+      setAvailableSources(json.data);
+    } catch (err) {
+      console.error("fetchSources error:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -144,6 +161,20 @@ export function KanbanBoard() {
         </div>
       </header>
 
+      {fetchError && (
+        <div className="toast error" style={{ position: "relative", marginBottom: "1rem" }}>
+          {fetchError}
+          <button className="action-btn" onClick={fetchIdeas} style={{ marginInlineStart: "0.5rem" }}>
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="board">
+          <div className="empty-state">جاري التحميل...</div>
+        </div>
+      ) : (
       <div className="board">
         {COLUMNS.map(({ status, label }) => {
           const columnIdeas = ideasByStatus(status);
@@ -225,6 +256,8 @@ export function KanbanBoard() {
           );
         })}
       </div>
+
+      )}
 
       {toast && (
         <div className={`toast${toast.error ? " error" : ""}`}>
