@@ -175,7 +175,10 @@ export function KanbanBoard() {
 
       {loading ? (
         <div className="board">
-          <div className="empty-state">جاري التحميل...</div>
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <div className="empty-state">جاري التحميل...</div>
+          </div>
         </div>
       ) : (
       <div className="board">

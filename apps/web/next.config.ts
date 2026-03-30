@@ -6,7 +6,6 @@ const backendUrl =
   "https://api-production-08cb.up.railway.app";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   transpilePackages: ["@sultan-saif/shared"],
   async rewrites() {
     return [
