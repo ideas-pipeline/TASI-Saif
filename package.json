@@ -1,0 +1,50 @@
+{
+  "name": "tasi-platform",
+  "version": "2.0.0",
+  "description": "TASI stock market AI analysis platform — data ingestion, technical/fundamental analysis, AI scoring",
+  "main": "src/cli.js",
+  "bin": {
+    "tasi": "src/cli.js"
+  },
+  "scripts": {
+    "backfill": "node src/cli.js backfill",
+    "daily": "node src/cli.js daily",
+    "scheduler": "node src/cli.js scheduler",
+    "init-db": "node src/cli.js init-db",
+    "tickers": "node src/cli.js tickers",
+    "stats": "node src/cli.js stats",
+    "analyze": "node src/cli.js analyze",
+    "analyze:ai": "node src/cli.js analyze --ai",
+    "serve": "node src/cli.js serve",
+    "backtest": "node src/cli.js backtest",
+    "var-backtest": "node src/cli.js var-backtest",
+    "var-backtest:monthly": "node src/cli.js var-backtest monthly",
+    "correlations": "node src/cli.js correlations compute",
+    "correlations:regimes": "node src/cli.js correlations regimes",
+    "portfolio": "node src/cli.js portfolio build",
+    "portfolio:show": "node src/cli.js portfolio show",
+    "portfolio:ai": "node src/cli.js portfolio build --ai",
+    "test": "node test/test.js"
+  },
+  "keywords": [
+    "tasi",
+    "saudi",
+    "stocks",
+    "yahoo-finance",
+    "analysis",
+    "ai"
+  ],
+  "author": "Sulaimaniah",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.8.0",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.4",
+    "uuid": "^13.0.0",
+    "yahoo-finance2": "^3.14.0"
+  }
+}
