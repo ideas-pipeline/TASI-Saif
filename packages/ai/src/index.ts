@@ -1,14 +1,15 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import type { GeneratedIdea } from "@sultan-saif/shared";
 import { fetchAllSources, type SourceArticle } from "./sources.js";
-
-const execFileAsync = promisify(execFile);
 
 export type { GeneratedIdea };
 export { fetchAllSources, type SourceArticle } from "./sources.js";
 
 export async function generateIdeasFromSources(): Promise<GeneratedIdea[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY environment variable is required");
+  }
+
   const articles = await fetchAllSources();
 
   if (articles.length === 0) {
@@ -46,13 +47,33 @@ Respond ONLY with valid JSON in this exact format:
   ]
 }`;
 
-  const { stdout } = await execFileAsync(
-    "claude",
-    ["-p", prompt, "--output-format", "text", "--max-turns", "1"],
-    { maxBuffer: 1024 * 1024, timeout: 120_000 }
-  );
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
 
-  const text = stdout.trim();
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic API error (${response.status}): ${err}`);
+  }
+
+  const result = (await response.json()) as {
+    content: Array<{ type: string; text?: string }>;
+  };
+  const text =
+    result.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("") || "";
 
   // Extract JSON from response — handle cases where Claude wraps in markdown code blocks
   const jsonMatch = text.match(/\{[\s\S]*"ideas"[\s\S]*\}/);
