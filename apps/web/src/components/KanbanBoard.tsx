@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Idea, IdeaStatus } from "@sultan-saif/shared";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL =
+  typeof window !== "undefined"
+    ? "/api/backend"
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000");
 
 const COLUMNS: { status: IdeaStatus; label: string }[] = [
   { status: "inbox", label: "\u{1F4E5} \u0627\u0644\u0648\u0627\u0631\u062F" },
