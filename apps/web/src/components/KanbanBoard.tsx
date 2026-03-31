@@ -2,6 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Idea, IdeaStatus } from "@sultan-saif/shared";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const API_URL =
   typeof window !== "undefined"
@@ -32,6 +49,160 @@ const SOURCE_COLORS: Record<string, string> = {
   "Reddit r/programming": "#ff4500",
 };
 
+interface DroppableColumnProps {
+  status: IdeaStatus;
+  label: string;
+  ideas: Idea[];
+  updateStatus: (id: string, status: IdeaStatus) => Promise<void>;
+  deleteIdea: (id: string) => Promise<void>;
+}
+
+function DroppableColumn({
+  status,
+  label,
+  ideas,
+  updateStatus,
+  deleteIdea,
+}: DroppableColumnProps) {
+  const { setNodeRef } = useDroppable({
+    id: `column-${status}`,
+  });
+
+  return (
+    <SortableContext
+      id={`column-${status}`}
+      items={ideas.map((idea) => idea.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <div ref={setNodeRef} className="column" data-status={status}>
+        <div className="column-header">
+          <span className="column-title">{label}</span>
+          <span className="column-count">{ideas.length}</span>
+        </div>
+
+        {ideas.length === 0 ? (
+          <div className="empty-state" style={{ minHeight: "200px" }}>
+            لا توجد أفكار
+          </div>
+        ) : (
+          ideas.map((idea) => (
+            <DraggableCard
+              key={idea.id}
+              idea={idea}
+              updateStatus={updateStatus}
+              deleteIdea={deleteIdea}
+            />
+          ))
+        )}
+      </div>
+    </SortableContext>
+  );
+}
+
+interface DraggableCardProps {
+  idea: Idea;
+  updateStatus: (id: string, status: IdeaStatus) => Promise<void>;
+  deleteIdea: (id: string) => Promise<void>;
+}
+
+function DraggableCard({ idea, updateStatus, deleteIdea }: DraggableCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: idea.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="card"
+    >
+      <div className="card-title">{idea.title}</div>
+      <div className="card-summary">{idea.summary}</div>
+      {idea.sourceName && (
+        <div className="card-source">
+          <span
+            className="source-badge"
+            style={{
+              backgroundColor:
+                SOURCE_COLORS[idea.sourceName] ?? "#6b7280",
+            }}
+          >
+            {idea.sourceName}
+          </span>
+          {idea.sourceUrl && (
+            <a
+              href={idea.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="source-link"
+              onClick={(e) => e.stopPropagation()}
+            >
+              رابط المصدر
+            </a>
+          )}
+        </div>
+      )}
+      <div className="card-actions">
+        {NEXT_STATUS[idea.status] && (
+          <button
+            className={`action-btn ${idea.status === "inbox" ? "btn-approve" : "btn-execute"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              updateStatus(idea.id, NEXT_STATUS[idea.status]!);
+            }}
+          >
+            {NEXT_LABEL[idea.status]}
+          </button>
+        )}
+        {idea.status !== "archived" && (
+          <button
+            className="action-btn btn-archive"
+            onClick={(e) => {
+              e.stopPropagation();
+              updateStatus(idea.id, "archived");
+            }}
+          >
+            أرشفة
+          </button>
+        )}
+        {idea.status === "archived" && (
+          <button
+            className="action-btn btn-inbox"
+            onClick={(e) => {
+              e.stopPropagation();
+              updateStatus(idea.id, "inbox");
+            }}
+          >
+            استرجاع
+          </button>
+        )}
+        <button
+          className="action-btn btn-delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteIdea(idea.id);
+          }}
+        >
+          حذف
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function KanbanBoard() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -43,6 +214,15 @@ export function KanbanBoard() {
     message: string;
     error?: boolean;
   } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const showToast = (message: string, error = false) => {
     setToast({ message, error });
@@ -135,6 +315,29 @@ export function KanbanBoard() {
   const ideasByStatus = (status: IdeaStatus) =>
     filteredIdeas.filter((idea) => idea.status === status);
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const activeIdea = ideas.find((idea) => idea.id === active.id);
+    if (!activeIdea) return;
+
+    // Extract status from the droppable id (format: "column-{status}")
+    const newStatus = over.id.toString().replace("column-", "") as IdeaStatus;
+
+    if (activeIdea.status !== newStatus) {
+      updateStatus(activeIdea.id, newStatus);
+    }
+  };
+
+  const activeIdea = activeId ? ideas.find((idea) => idea.id === activeId) : null;
+
   return (
     <>
       <header className="header">
@@ -181,88 +384,33 @@ export function KanbanBoard() {
           </div>
         </div>
       ) : (
-      <div className="board">
-        {COLUMNS.map(({ status, label }) => {
-          const columnIdeas = ideasByStatus(status);
-          return (
-            <div key={status} className="column">
-              <div className="column-header">
-                <span className="column-title">{label}</span>
-                <span className="column-count">{columnIdeas.length}</span>
-              </div>
-
-              {columnIdeas.length === 0 ? (
-                <div className="empty-state">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0641\u0643\u0627\u0631</div>
-              ) : (
-                columnIdeas.map((idea) => (
-                  <div key={idea.id} className="card">
-                    <div className="card-title">{idea.title}</div>
-                    <div className="card-summary">{idea.summary}</div>
-                    {idea.sourceName && (
-                      <div className="card-source">
-                        <span
-                          className="source-badge"
-                          style={{
-                            backgroundColor:
-                              SOURCE_COLORS[idea.sourceName] ?? "#6b7280",
-                          }}
-                        >
-                          {idea.sourceName}
-                        </span>
-                        {idea.sourceUrl && (
-                          <a
-                            href={idea.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="source-link"
-                          >
-                            \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0635\u062F\u0631
-                          </a>
-                        )}
-                      </div>
-                    )}
-                    <div className="card-actions">
-                      {NEXT_STATUS[status] && (
-                        <button
-                          className={`action-btn ${status === "inbox" ? "btn-approve" : "btn-execute"}`}
-                          onClick={() =>
-                            updateStatus(idea.id, NEXT_STATUS[status]!)
-                          }
-                        >
-                          {NEXT_LABEL[status]}
-                        </button>
-                      )}
-                      {status !== "archived" && (
-                        <button
-                          className="action-btn btn-archive"
-                          onClick={() => updateStatus(idea.id, "archived")}
-                        >
-                          \u0623\u0631\u0634\u0641\u0629
-                        </button>
-                      )}
-                      {status === "archived" && (
-                        <button
-                          className="action-btn btn-inbox"
-                          onClick={() => updateStatus(idea.id, "inbox")}
-                        >
-                          \u0627\u0633\u062A\u0631\u062C\u0627\u0639
-                        </button>
-                      )}
-                      <button
-                        className="action-btn btn-delete"
-                        onClick={() => deleteIdea(idea.id)}
-                      >
-                        \u062D\u0630\u0641
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="board">
+          {COLUMNS.map(({ status, label }) => (
+            <DroppableColumn
+              key={status}
+              status={status}
+              label={label}
+              ideas={ideasByStatus(status)}
+              updateStatus={updateStatus}
+              deleteIdea={deleteIdea}
+            />
+          ))}
+        </div>
+        <DragOverlay>
+          {activeIdea ? (
+            <div className="card" style={{ opacity: 0.9 }}>
+              <div className="card-title">{activeIdea.title}</div>
+              <div className="card-summary">{activeIdea.summary}</div>
             </div>
-          );
-        })}
-      </div>
-
+          ) : null}
+        </DragOverlay>
+      </DndContext>
       )}
 
       {toast && (
