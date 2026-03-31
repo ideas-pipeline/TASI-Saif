@@ -4,15 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import type { Idea, IdeaStatus } from "@sultan-saif/shared";
 import {
   DndContext,
-  DragEndEvent,
   DragOverlay,
-  DragStartEvent,
   closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
   useDroppable,
 } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
