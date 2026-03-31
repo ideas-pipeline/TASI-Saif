@@ -7,7 +7,11 @@ import {
 import Disclaimer from '../../../../components/Disclaimer';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+export function generateStaticParams() {
+  return [
+    "1010.SR","1020.SR","1030.SR","1050.SR","1060.SR","1080.SR","1120.SR","1140.SR","1150.SR","1180.SR","1210.SR","1211.SR","1212.SR","2010.SR","2222.SR"
+  ].map(symbol => ({ symbol }));
+}
 
 function RiskGauge({ value, label, description }: { value: number | null; label: string; description: string }) {
   if (value == null) return (

@@ -6,8 +6,6 @@ import SignalBadge from '../components/SignalBadge';
 import Disclaimer from '../components/Disclaimer';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 export default async function HomePage() {
   let rankings, sectors, signals, stats;
   try {

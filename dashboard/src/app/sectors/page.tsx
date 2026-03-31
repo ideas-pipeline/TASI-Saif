@@ -7,8 +7,6 @@ import {
 import Disclaimer from '../../components/Disclaimer';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 export default async function SectorsPage() {
   let data;
   try {
@@ -17,10 +15,7 @@ export default async function SectorsPage() {
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold text-tasi-gold mb-2">تقارير القطاعات</h1>
-        <p className="text-gray-400 mb-4">لا توجد تقارير قطاعات بعد</p>
-        <p className="text-gray-500 text-sm">
-          شغّل: <code className="bg-tasi-card px-2 py-1 rounded text-xs">node src/cli.js sectors</code>
-        </p>
+        <p className="text-gray-400 mb-4">لا توجد بيانات قطاعات متاحة حالياً</p>
       </div>
     );
   }

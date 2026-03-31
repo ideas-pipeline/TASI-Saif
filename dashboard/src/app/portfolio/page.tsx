@@ -5,8 +5,6 @@ import SignalBadge from '../../components/SignalBadge';
 import Link from 'next/link';
 import PortfolioCharts from './PortfolioCharts';
 
-export const dynamic = 'force-dynamic';
-
 export default async function PortfolioPage() {
   let portfolio;
   try {
@@ -15,10 +13,7 @@ export default async function PortfolioPage() {
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold text-tasi-gold mb-2">المحفظة النموذجية</h1>
-        <p className="text-gray-400 mb-4">لم يتم إنشاء محفظة نموذجية بعد</p>
-        <p className="text-gray-500 text-sm">
-          شغّل: <code className="bg-tasi-card px-2 py-1 rounded text-xs">node src/cli.js portfolio build</code>
-        </p>
+        <p className="text-gray-400 mb-4">لا توجد بيانات محفظة متاحة حالياً</p>
       </div>
     );
   }

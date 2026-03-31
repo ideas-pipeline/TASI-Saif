@@ -1,12 +1,6 @@
-const API_BASE = typeof window !== 'undefined'
-  ? ''  // Client-side: use Next.js rewrites (relative URL)
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
+import * as dataLayer from './data';
 
-async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
+// Direct data imports for static export (no fetch needed)
 
 export interface Stock {
   symbol: string;
@@ -78,41 +72,52 @@ export interface SignalsData {
 }
 
 export interface StatsData {
-  total_stocks: number;
-  total_price_records: number;
-  date_range: { min: string; max: string };
-  sectors: number;
-  last_ingestion: { completed_at: string; status: string } | null;
+  stocks: number;
+  priceRecords: number;
+  indicatorRecords: number;
+  scoreRecords: number;
+  priceRange: { from: string; to: string };
+  latestAnalysis: string | null;
+  // Compatibility aliases
+  total_stocks?: number;
+  total_price_records?: number;
+  date_range?: { min: string; max: string };
+  sectors?: number;
+  last_ingestion?: { completed_at: string; status: string } | null;
 }
 
 export async function getStocks(params?: { sector?: string; sort?: string; order?: string }): Promise<{ stocks: Stock[]; disclaimer: string }> {
-  const qs = new URLSearchParams();
-  if (params?.sector) qs.set('sector', params.sector);
-  if (params?.sort) qs.set('sort', params.sort);
-  if (params?.order) qs.set('order', params.order);
-  const query = qs.toString() ? `?${qs.toString()}` : '';
-  return fetchApi(`/api/stocks${query}`);
+  return dataLayer.getStocks(params) as any;
 }
 
 export async function getStock(symbol: string): Promise<StockDetail> {
-  return fetchApi(`/api/stocks/${symbol}`);
+  const result = dataLayer.getStock(symbol);
+  if (!result) throw new Error('Stock not found');
+  return result as any;
 }
 
 export async function getRankings(limit?: number): Promise<{ rankings: Stock[]; disclaimer: string }> {
-  const query = limit ? `?limit=${limit}` : '';
-  return fetchApi(`/api/rankings${query}`);
+  return dataLayer.getRankings(limit) as any;
 }
 
 export async function getSectors(): Promise<{ sectors: SectorData[]; disclaimer: string }> {
-  return fetchApi('/api/sectors');
+  return dataLayer.getSectors() as any;
 }
 
 export async function getSignals(): Promise<SignalsData> {
-  return fetchApi('/api/signals');
+  return dataLayer.getSignals() as any;
 }
 
 export async function getStats(): Promise<StatsData> {
-  return fetchApi('/api/stats');
+  const stats = dataLayer.getStats();
+  return {
+    ...stats,
+    total_stocks: stats.stocks,
+    total_price_records: stats.priceRecords,
+    date_range: stats.priceRange ? { min: stats.priceRange.from, max: stats.priceRange.to } : { min: '', max: '' },
+    sectors: 0,
+    last_ingestion: null,
+  } as any;
 }
 
 export interface FinancialReport {
@@ -173,12 +178,19 @@ export interface FinancialsData {
   disclaimer: string;
 }
 
-export async function getFinancials(symbol: string, period?: string): Promise<FinancialsData> {
-  const query = period ? `?period=${period}` : '';
-  return fetchApi(`/api/stocks/${symbol}/financials${query}`);
+export async function getFinancials(symbol: string, _period?: string): Promise<FinancialsData> {
+  const stock = dataLayer.getStock(symbol);
+  if (!stock) throw new Error('Stock not found');
+  return {
+    stock: { symbol: stock.stock.symbol, name: stock.stock.name, sector: stock.stock.sector },
+    reports: [],
+    valuation: null,
+    yoyComparisons: [],
+    disclaimer: dataLayer.DISCLAIMER,
+  };
 }
 
-// ─── Risk Analysis Types ──────��───────────────────────────────────────
+// ─── Risk Analysis Types ─────────────────────────────────────────────
 
 export interface VaRResult {
   confidence: number;
@@ -230,14 +242,16 @@ export interface SectorCorrelations {
 }
 
 export async function getRiskAnalysis(symbol: string): Promise<RiskAnalysis> {
-  return fetchApi(`/api/risk/${symbol}`);
+  const result = dataLayer.getRiskAnalysis(symbol);
+  if (!result) throw new Error('Stock not found');
+  return result as any;
 }
 
 export async function getSectorCorrelations(): Promise<SectorCorrelations> {
-  return fetchApi('/api/risk/sectors/correlations');
+  return { sectors: [], matrix: {}, disclaimer: dataLayer.DISCLAIMER };
 }
 
-// ─── Portfolio Types ──────────────────────────────────────────────────
+// ─── Portfolio Types ─────────────────────────────────────────────────
 
 export interface PortfolioHolding {
   symbol: string;
@@ -314,15 +328,15 @@ export interface PortfolioBacktest {
 }
 
 export async function getPortfolio(): Promise<PortfolioData> {
-  return fetchApi('/api/portfolio');
+  // No portfolio data available in static export
+  throw new Error('Portfolio data not available');
 }
 
-export async function getPortfolioBacktest(weeks?: number): Promise<PortfolioBacktest> {
-  const query = weeks ? `?weeks=${weeks}` : '';
-  return fetchApi(`/api/portfolio/backtest${query}`);
+export async function getPortfolioBacktest(_weeks?: number): Promise<PortfolioBacktest> {
+  throw new Error('Portfolio backtest not available');
 }
 
-// ─── Sector Report Types ──────────────────────────────────────────────
+// ─── Sector Report Types ─────────────────────────────────────────────
 
 export interface SectorTopBottom {
   symbol: string;
@@ -419,9 +433,9 @@ export interface SectorReportsData {
 }
 
 export async function getSectorReports(): Promise<SectorReportsData> {
-  return fetchApi('/api/sectors/reports');
+  return { date: null, sectors: [], rotation: [], disclaimer: dataLayer.DISCLAIMER };
 }
 
-export async function getSectorReportDetail(sector: string): Promise<SectorReport & { date: string; disclaimer: string }> {
-  return fetchApi(`/api/sectors/${encodeURIComponent(sector)}/report`);
+export async function getSectorReportDetail(_sector: string): Promise<SectorReport & { date: string; disclaimer: string }> {
+  throw new Error('Sector reports not available');
 }
