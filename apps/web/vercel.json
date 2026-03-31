@@ -1,8 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "cd ../.. && pnpm turbo run build --filter=@sultan-saif/web",
   "outputDirectory": ".next",
+  "ignoreCommand": "exit 1",
   "crons": [
     {
       "path": "/api/cron/generate",
