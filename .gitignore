@@ -40,3 +40,6 @@ pnpm-debug.log*
 # Misc
 *.tsbuildinfo
 .vercel
+
+# graphify ephemeral query stamp
+graphify-out/cache/last_query_stamp
