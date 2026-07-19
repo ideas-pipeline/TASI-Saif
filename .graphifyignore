@@ -1,0 +1,10 @@
+# Claude config and graphify's own skill docs
+.claude/
+CLAUDE.md
+
+# TypeScript configs
+tsconfig.json
+tsconfig.*.json
+
+# Package manifests
+package.json
